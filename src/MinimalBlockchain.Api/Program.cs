@@ -1,20 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using MinimalBlockchain.Api;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<Blockchain>();
 await using var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-
 var nodeIdentifier = Guid.NewGuid().ToString().Replace("-", string.Empty);
-var blockchain = new Blockchain();
+var blockchain = app.Services.GetRequiredService<Blockchain>();
 
 app.MapPost("/transactions/new", async http =>
 {
@@ -24,14 +23,14 @@ app.MapPost("/transactions/new", async http =>
         string.IsNullOrWhiteSpace(transaction.Recipient) ||
         transaction.Amount <= 0)
     {
-        http.Response.StatusCode = 400;
+        http.Response.StatusCode = ((int)HttpStatusCode.BadRequest);
         await http.Response.WriteAsync("Missing values");
     }
     else
     {
-        var index = blockchain.NewTransaction(transaction);
+        var index = blockchain.AddTransaction(transaction);
 
-        http.Response.StatusCode = 201;
+        http.Response.StatusCode = ((int)HttpStatusCode.Created);
         await http.Response.WriteAsJsonAsync(new
         {
             Message = $"Transaction will be added to Block {index}"
@@ -41,13 +40,13 @@ app.MapPost("/transactions/new", async http =>
 
 app.MapGet("/mine", (Func<object>)(() =>
 {
-    var lastBlock = blockchain.LastBlock;
-    var proof = blockchain.ProofOfWork(lastBlock.Proof);
+    var lastBlock = blockchain.Chain.Last();
+    var proof = BlockchainManager.DoWork(lastBlock.Proof);
 
-    blockchain.NewTransaction(new Transaction(Sender: "0", Recipient: nodeIdentifier, Amount: 1));
+    blockchain.AddTransaction(new Transaction(Sender: "0", Recipient: nodeIdentifier, Amount: 1));
 
     var previousHash = lastBlock.GetSha256Hash();
-    var block = blockchain.NewBlock(proof, previousHash);
+    var block = blockchain.AddNewBlock(proof, previousHash);
 
     return new
     {

@@ -1,66 +1,77 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace MinimalBlockchain.Api
 {
-    internal class Blockchain
+    internal sealed class Blockchain
     {
-        public List<Block> Chain { get; private set; }
-        public List<Transaction> CurrentTransactions { get; private set; }
-        public List<Uri> Nodes { get; init; }
+        private List<Block> chain;
+        private List<Transaction> currentTransactions;
+        private List<Uri> nodes;
 
-        public Block LastBlock
+        private IHttpClientFactory clientFactory;
+
+        public IReadOnlyCollection<Block> Chain => this.chain;
+
+        public Blockchain(IHttpClientFactory clientFactory)
         {
-            get => this.Chain[^1];
-            set
-            {
-                this.Chain.Remove(this.LastBlock);
-                this.Chain.Add(value);
-            }
+            (this.chain, this.currentTransactions, this.nodes) = (new List<Block>(), new List<Transaction>(), new List<Uri>());
+            this.clientFactory = clientFactory;
+
+            this.AddNewBlock(previousHash: "1", proof: 100);
         }
 
-        public Blockchain()
+        public Block AddNewBlock(int proof, string? previousHash = null)
         {
-            (this.Chain, this.CurrentTransactions, this.Nodes) = (new List<Block>(), new List<Transaction>(), new List<Uri>());
-
-            this.NewBlock(previousHash: "1", proof: 100);
-        }
-
-        public Block NewBlock(int proof, string? previousHash = null)
-        {
-            this.Chain.Add(new Block(
+            this.chain.Add(new Block(
                 Index: this.Chain.Count + 1,
                 Timestamp: DateTime.Now,
-                Transactions: this.CurrentTransactions,
+                Transactions: this.currentTransactions.ToList(),
                 Proof: proof,
-                PreviousHash: previousHash ?? this.LastBlock.GetSha256Hash()));
+                PreviousHash: previousHash ?? this.Chain.Last().GetSha256Hash()));
 
-            this.CurrentTransactions = new List<Transaction>();
+            this.currentTransactions.Clear();
 
-            return this.LastBlock;
+            return this.Chain.Last();
         }
 
-        public int NewTransaction(Transaction transaction)
+        public int AddTransaction(Transaction transaction)
         {
-            this.CurrentTransactions.Add(transaction);
-            return this.LastBlock.Index + 1;
+            this.currentTransactions.Add(transaction);
+            return this.Chain.Last().Index + 1;
         }
 
-        public int ProofOfWork(int lastProof)
+        public async Task<bool> ResolveConflictsAsync()
         {
-            bool IsProofInvalid(int lastProof, int proof) =>
-                Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{lastProof}{proof}")))
-                    .Take(4)
-                    .All(digit => digit == '0');
+            using var client = this.clientFactory.CreateClient();
 
-            var proof = 0;
-            while (IsProofInvalid(lastProof, proof))
-                proof += 1;
-            
-            return proof;
+            List<Block>? longerChain = null;
+            var longestChainLength = this.Chain.Count;
+
+            foreach (var node in this.nodes)
+            {
+                using var response = await client.GetAsync($"{node}/chain");
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    var otherChain = await System.Text.Json.JsonSerializer.DeserializeAsync<List<Block>>(await response.Content.ReadAsStreamAsync());
+                    if (otherChain?.Count > longestChainLength && BlockchainManager.IsChainValid(otherChain))
+                    {
+                        longerChain = otherChain;
+                        longestChainLength = otherChain.Count;
+                    }
+                }
+            }
+
+            var isResolved = longerChain != null;
+            if (isResolved) {
+                this.chain = longerChain;
+            }
+
+            return isResolved;
         }
     }
 }
