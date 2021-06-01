@@ -23,16 +23,13 @@ namespace MinimalBlockchain.Api
             {
                 Console.WriteLine(previousBlock);
                 Console.WriteLine(block);
+                Console.WriteLine("\n-------------\n");
 
                 if (block.PreviousHash != previousBlock.GetSha256Hash() ||
                     IsProofInvalid(previousBlock.Proof, block.Proof))
                 {
-                    System.Console.WriteLine("hashes not matching or proof invalid:");
-                    System.Console.WriteLine($"\tactual:    {previousBlock.GetSha256Hash()}");
-                    System.Console.WriteLine($"\texpected:  {block.PreviousHash}");
                     return false;
                 }
-                Console.WriteLine("\n-------------\n");
             }
 
             return true;
