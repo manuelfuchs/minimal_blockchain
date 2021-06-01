@@ -22,7 +22,8 @@ app.MapGet("/chain", (Func<IEnumerable<Block>>)(() => blockchain.Chain));
 
 await app.RunAsync();
 
-async Task AddTransaction(HttpContext http) {
+async Task AddTransaction(HttpContext http)
+{
     var transaction = await http.Request.ReadFromJsonAsync<Transaction>();
 
     if (string.IsNullOrWhiteSpace(transaction?.Sender) ||
@@ -44,7 +45,7 @@ async Task AddTransaction(HttpContext http) {
     }
 }
 
-object MineBlock() {
+object MineBlock()
 {
     var lastBlock = blockchain.Chain.Last();
     var proof = BlockchainManager.DoWork(lastBlock.Proof);
