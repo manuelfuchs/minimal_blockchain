@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,8 +16,13 @@ await using var app = builder.Build();
 var nodeIdentifier = Guid.NewGuid().ToString().Replace("-", string.Empty);
 var blockchain = app.Services.GetRequiredService<Blockchain>();
 
-app.MapPost("/transactions/new", async http =>
-{
+app.MapPost("/transactions/new", AddTransaction);
+app.MapGet("/mine", (Func<object>)MineBlock);
+app.MapGet("/chain", (Func<IEnumerable<Block>>)(() => blockchain.Chain));
+
+await app.RunAsync();
+
+async Task AddTransaction(HttpContext http) {
     var transaction = await http.Request.ReadFromJsonAsync<Transaction>();
 
     if (string.IsNullOrWhiteSpace(transaction?.Sender) ||
@@ -36,9 +42,9 @@ app.MapPost("/transactions/new", async http =>
             Message = $"Transaction will be added to Block {index}"
         });
     }
-});
+}
 
-app.MapGet("/mine", (Func<object>)(() =>
+object MineBlock() {
 {
     var lastBlock = blockchain.Chain.Last();
     var proof = BlockchainManager.DoWork(lastBlock.Proof);
@@ -56,8 +62,4 @@ app.MapGet("/mine", (Func<object>)(() =>
         Proof = block.Proof,
         previousHash = block.PreviousHash
     };
-}));
-
-app.MapGet("/chain", (Func<IEnumerable<Block>>)(() => blockchain.Chain));
-
-await app.RunAsync();
+}
