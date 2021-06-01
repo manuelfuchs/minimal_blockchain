@@ -19,11 +19,3 @@ Content-Type: application/json
     "recipient": "you",
     "amount": 42
 }
-
-###
-
-# invalid call for a new transaction
-POST {{baseUrl}}/transactions/new
-Content-Type: application/json
-
-{}
