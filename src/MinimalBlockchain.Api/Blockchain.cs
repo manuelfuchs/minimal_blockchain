@@ -24,10 +24,10 @@ namespace MinimalBlockchain.Api
         {
             (this.Chain, this.CurrentTransactions) = (new List<Block>(), new List<Transaction>());
 
-            this.newBlock(previousHash: 1, proof: 100);
+            this.NewBlock(previousHash: 1, proof: 100);
         }
 
-        public Block newBlock(int proof, int? previousHash = null)
+        public Block NewBlock(int proof, int? previousHash = null)
         {
             this.Chain.Add(new Block(
                 Index: this.Chain.Count + 1,
@@ -41,22 +41,22 @@ namespace MinimalBlockchain.Api
             return this.LastBlock;
         }
 
-        public void newTransaction(string sender, string recipient, int amount)
+        public int NewTransaction(Transaction transaction)
         {
-            this.CurrentTransactions.Add(new Transaction(sender, recipient, amount));
-            this.LastBlock = this.LastBlock with { Index = this.LastBlock.Index + 1 };
+            this.CurrentTransactions.Add(transaction);
+            return this.LastBlock.Index + 1;
         }
 
-        public int proofOfWork(int lastProof)
+        public int ProofOfWork(int lastProof)
         {
-            bool isProofInvalid(int lastProof, int proof) =>
+            bool IsProofInvalid(int lastProof, int proof) =>
                 SHA256.HashData(Convert.FromBase64String($"{lastProof}{proof}"))
                     .Select(b => $"{b:X2}")
                     .Take(4)
                     .All(digit => digit == "0");
 
             var proof = 0;
-            while (isProofInvalid(lastProof, proof))
+            while (IsProofInvalid(lastProof, proof))
                 proof += 1;
             
             return proof;
