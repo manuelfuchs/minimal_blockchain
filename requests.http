@@ -1,4 +1,4 @@
-@baseUrl = https://localhost:5001
+@baseUrl = http://localhost:50001
 
 # get blockchain
 GET {{baseUrl}}/chain
@@ -27,7 +27,7 @@ POST {{baseUrl}}/nodes/register
 Content-Type: application/json
 
 [
-    "https://localhost:5003"
+    "http://node_2"
 ]
 
 ### 

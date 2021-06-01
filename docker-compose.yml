@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  node_1:
+    build: .
+    ports:
+      - "50001:80"
+  node_2:
+    build: .
+    ports:
+      - "50002:80"

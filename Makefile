@@ -1,10 +1,11 @@
 dotnet = dotnet
+docker = docker
 source_code_root = src
-publish_directory = out
+publish_directory = published
 solution_file = ${source_code_root}/MinimalBlockchain.sln
 api_proj = ${source_code_root}/MinimalBlockchain.Api/MinimalBlockchain.Api.csproj
 
-.PHONY = run build clean publish
+.PHONY = run build clean publish cluster
 
 run:
 	@${dotnet} run --project ${api_proj}
@@ -20,4 +21,7 @@ clean:
 	@${dotnet} clean ${solution_file}
 
 publish:
-	@${dotnet} publish ${solution_file} -c Release -r linux-x64 --self-contained true --output ${publish_directory}
+	@${dotnet} publish ${solution_file} -c Release --output ${publish_directory}
+
+cluster: publish
+	@${docker} compose up

@@ -9,5 +9,6 @@ The goal was to implement a minimal version of a blockchain which does not inclu
 
 ## Instructions
 
-To start the blockchain backend, execute `make` or `make run`.
-Three requests are defined in the `requests.http` file, which are executable with the extension `humao.rest-client`.
+To start a single node directly on the host machine execute `make run`.
+
+To start a simulated blockchain execute `make cluster`, which uses *docker compose* to create two nodes. If you want to register nodes with other nodes, use the host name in the docker network like *node_2*.
