@@ -10,4 +10,4 @@ The goal was to implement a minimal version of a blockchain which does not inclu
 ## Instructions
 
 To start the blockchain backend, execute `make` or `make run`.
-Three requests are defined in the `requests.http` file, which are executable with the extensions `humao.rest-client`.
+Three requests are defined in the `requests.http` file, which are executable with the extension `humao.rest-client`.
