@@ -554,3 +554,6 @@ obj/
 *.tlog
 
 # End of https://www.toptal.com/developers/gitignore/api/csharp,visualstudiocode,dotnetcore,visualstudio
+
+out/*
+!out/.gitkeep
