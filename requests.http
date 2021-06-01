@@ -19,3 +19,21 @@ Content-Type: application/json
     "recipient": "you",
     "amount": 42
 }
+
+###
+
+# register nodes
+POST {{baseUrl}}/nodes/register
+Content-Type: application/json
+
+[
+    "https://localhost:5003"
+]
+
+### 
+
+# resolve blockchain
+
+GET {{baseUrl}}/nodes/resolve
+
+###

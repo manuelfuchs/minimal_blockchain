@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace MinimalBlockchain.Api
@@ -11,28 +12,29 @@ namespace MinimalBlockchain.Api
     {
         private List<Block> chain;
         private List<Transaction> currentTransactions;
-        private List<Uri> nodes;
+        private HashSet<Uri> nodes;
 
         private IHttpClientFactory clientFactory;
 
         public IReadOnlyCollection<Block> Chain => this.chain;
+        public ISet<Uri> Nodes => nodes;
 
         public Blockchain(IHttpClientFactory clientFactory)
         {
-            (this.chain, this.currentTransactions, this.nodes) = (new List<Block>(), new List<Transaction>(), new List<Uri>());
+            (this.chain, this.currentTransactions, this.nodes) = (new List<Block>(), new List<Transaction>(), new HashSet<Uri>());
             this.clientFactory = clientFactory;
 
             this.AddNewBlock(previousHash: "1", proof: 100);
         }
 
-        public Block AddNewBlock(int proof, string? previousHash = null)
+        public Block AddNewBlock(int proof, string previousHash)
         {
             this.chain.Add(new Block(
                 Index: this.Chain.Count + 1,
-                Timestamp: DateTime.Now,
+                Timestamp: DateTime.UtcNow,
                 Transactions: this.currentTransactions.ToList(),
                 Proof: proof,
-                PreviousHash: previousHash ?? this.Chain.Last().GetSha256Hash()));
+                PreviousHash: previousHash));
 
             this.currentTransactions.Clear();
 
@@ -47,18 +49,19 @@ namespace MinimalBlockchain.Api
 
         public async Task<bool> ResolveConflictsAsync()
         {
-            using var client = this.clientFactory.CreateClient();
+            var serializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            using var client = this.clientFactory.CreateClient("default_client");
 
             List<Block>? longerChain = null;
             var longestChainLength = this.Chain.Count;
 
             foreach (var node in this.nodes)
             {
-                using var response = await client.GetAsync($"{node}/chain");
+                using var response = await client.GetAsync($"{node}chain");
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    var otherChain = await System.Text.Json.JsonSerializer.DeserializeAsync<List<Block>>(await response.Content.ReadAsStreamAsync());
-                    if (otherChain?.Count > longestChainLength && BlockchainManager.IsChainValid(otherChain))
+                    var otherChain = (await JsonSerializer.DeserializeAsync<IEnumerable<Block>>(await response.Content.ReadAsStreamAsync(), serializerOptions))?.ToList();
+                    if (otherChain?.Count() > longestChainLength && BlockchainManager.IsChainValid(otherChain))
                     {
                         longerChain = otherChain;
                         longestChainLength = otherChain.Count;
@@ -67,7 +70,8 @@ namespace MinimalBlockchain.Api
             }
 
             var isResolved = longerChain != null;
-            if (isResolved) {
+            if (isResolved)
+            {
                 this.chain = longerChain;
             }
 

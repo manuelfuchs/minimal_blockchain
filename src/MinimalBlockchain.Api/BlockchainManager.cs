@@ -19,17 +19,20 @@ namespace MinimalBlockchain.Api
 
         public static bool IsChainValid(IList<Block> chain)
         {
-            foreach (var (block, previousBlock) in chain.Skip(1).Select((b, i) => (b, chain[i - 1])))
+            foreach (var (block, previousBlock) in chain.Skip(1).Select((b, i) => (b, chain[i])))
             {
                 Console.WriteLine(previousBlock);
                 Console.WriteLine(block);
-                Console.WriteLine("\n-------------\n");
 
-                if (block.PreviousHash != block.GetSha256Hash() ||
+                if (block.PreviousHash != previousBlock.GetSha256Hash() ||
                     IsProofInvalid(previousBlock.Proof, block.Proof))
                 {
+                    System.Console.WriteLine("hashes not matching or proof invalid:");
+                    System.Console.WriteLine($"\tactual:    {previousBlock.GetSha256Hash()}");
+                    System.Console.WriteLine($"\texpected:  {block.PreviousHash}");
                     return false;
                 }
+                Console.WriteLine("\n-------------\n");
             }
 
             return true;
@@ -38,6 +41,6 @@ namespace MinimalBlockchain.Api
         private static bool IsProofInvalid(int lastProof, int proof) =>
             Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{lastProof}{proof}")))
                 .Take(4)
-                .All(digit => digit == '0');
+                .Any(digit => digit != '0');
     }
 }
