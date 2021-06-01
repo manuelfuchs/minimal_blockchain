@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace MinimalBlockchain.Api
 {
@@ -9,6 +10,7 @@ namespace MinimalBlockchain.Api
     {
         public List<Block> Chain { get; private set; }
         public List<Transaction> CurrentTransactions { get; private set; }
+        public List<Uri> Nodes { get; init; }
 
         public Block LastBlock
         {
@@ -22,19 +24,19 @@ namespace MinimalBlockchain.Api
 
         public Blockchain()
         {
-            (this.Chain, this.CurrentTransactions) = (new List<Block>(), new List<Transaction>());
+            (this.Chain, this.CurrentTransactions, this.Nodes) = (new List<Block>(), new List<Transaction>(), new List<Uri>());
 
-            this.NewBlock(previousHash: 1, proof: 100);
+            this.NewBlock(previousHash: "1", proof: 100);
         }
 
-        public Block NewBlock(int proof, int? previousHash = null)
+        public Block NewBlock(int proof, string? previousHash = null)
         {
             this.Chain.Add(new Block(
                 Index: this.Chain.Count + 1,
                 Timestamp: DateTime.Now,
                 Transactions: this.CurrentTransactions,
                 Proof: proof,
-                PreviousHash: previousHash ?? this.LastBlock.GetHashCode()));
+                PreviousHash: previousHash ?? this.LastBlock.GetSha256Hash()));
 
             this.CurrentTransactions = new List<Transaction>();
 
@@ -50,10 +52,9 @@ namespace MinimalBlockchain.Api
         public int ProofOfWork(int lastProof)
         {
             bool IsProofInvalid(int lastProof, int proof) =>
-                SHA256.HashData(Convert.FromBase64String($"{lastProof}{proof}"))
-                    .Select(b => $"{b:X2}")
+                Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{lastProof}{proof}")))
                     .Take(4)
-                    .All(digit => digit == "0");
+                    .All(digit => digit == '0');
 
             var proof = 0;
             while (IsProofInvalid(lastProof, proof))

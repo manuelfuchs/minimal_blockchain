@@ -14,7 +14,7 @@ if (app.Environment.IsDevelopment())
 }
 
 var nodeIdentifier = Guid.NewGuid().ToString().Replace("-", string.Empty);
-var blockChain = new Blockchain();
+var blockchain = new Blockchain();
 
 app.MapPost("/transactions/new", async http =>
 {
@@ -29,7 +29,7 @@ app.MapPost("/transactions/new", async http =>
     }
     else
     {
-        var index = blockChain.NewTransaction(transaction);
+        var index = blockchain.NewTransaction(transaction);
 
         http.Response.StatusCode = 201;
         await http.Response.WriteAsJsonAsync(new
@@ -39,11 +39,26 @@ app.MapPost("/transactions/new", async http =>
     }
 });
 
-app.MapGet("/mine", (Func<string>)(() => "Hello World!2"));
+app.MapGet("/mine", (Func<object>)(() =>
+{
+    var lastBlock = blockchain.LastBlock;
+    var proof = blockchain.ProofOfWork(lastBlock.Proof);
 
-app.MapGet("/chain", (Func<IEnumerable<Transaction>>)(() => new[]{
-    new Transaction("my", "you", 10),
-    new Transaction("you", "my", 20)
+    blockchain.NewTransaction(new Transaction(Sender: "0", Recipient: nodeIdentifier, Amount: 1));
+
+    var previousHash = lastBlock.GetSha256Hash();
+    var block = blockchain.NewBlock(proof, previousHash);
+
+    return new
+    {
+        Message = "New Block Forged",
+        Index = block.Index,
+        Transactions = block.Transactions,
+        Proof = block.Proof,
+        previousHash = block.PreviousHash
+    };
 }));
+
+app.MapGet("/chain", (Func<IEnumerable<Block>>)(() => blockchain.Chain));
 
 await app.RunAsync();

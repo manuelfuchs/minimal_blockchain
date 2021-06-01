@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace MinimalBlockchain.Api
 {
-    internal record Block(int Index, DateTime Timestamp, List<Transaction> Transactions, int Proof, int PreviousHash)
+    internal record Block(int Index, DateTime Timestamp, List<Transaction> Transactions, int Proof, string PreviousHash)
     {
-        public override int GetHashCode() =>
-            SHA256.HashData(Convert.FromBase64String(this.ToString()))
-                .Select(b => Convert.ToInt32($"{b:X2}"))
-                .Sum();
+        public string GetSha256Hash() => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(this.ToString())));
     }
 }
